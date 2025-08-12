@@ -1,11 +1,11 @@
-import { getTournaments } from '@/lib/sheets';
 import Link from 'next/link';
+import { getTournaments } from '@/lib/sheets';
 
-export const metadata = { title: '過去の大会 | SW Invitational' };
+export const dynamic = 'force-dynamic';
 
-export default async function PastPage() {
+export default async function Page() {
   const all = await getTournaments();
-  const past = all.filter(t => !t.isCurrent);
+  const past = all.filter((t) => !t.isCurrent);
 
   return (
     <section className="grid gap-6">
@@ -14,26 +14,22 @@ export default async function PastPage() {
         <div className="card text-sm text-black/60">まだ過去大会はありません。</div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {past.map(t => (
+          {past.map((t) => (
             <article key={t.slug} className="card">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={t.thumbnail || 'https://images.unsplash.com/photo-1518609571773-39b7d303a87a?q=80&w=1200&auto=format&fit=crop'}
-                alt={t.title}
-                className="w-full h-40 object-cover rounded-xl border border-black/10"
-              />
-              <div className="mt-3">
-                <div className="font-medium">{t.title}</div>
-                <div className="text-sm text-black/60 mt-1">
-                  {t.dateLabel ?? ''}{t.course ? ` ・ ${t.course}` : ''}
-                </div>
-                <a href={`/past/${t.slug}`} className="btn-primary mt-3 inline-flex">詳細</a>
+              <div className="font-medium">{t.title}</div>
+              <div className="text-sm text-black/60 mt-1">
+                {t.dateLabel ?? ''}{t.course ? ` ｜ ${t.course}` : ''}
               </div>
+              <Link
+                href={{ pathname: '/leaderboard', query: { t: t.slug } }}
+                className="btn-primary mt-3 inline-flex"
+              >
+                詳細（リーダーボード）
+              </Link>
             </article>
           ))}
         </div>
       )}
-      <div className="text-sm text-black/60">※ 詳細ページは後で `/past/[slug]` を作成予定。</div>
     </section>
   );
 }

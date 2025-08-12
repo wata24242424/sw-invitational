@@ -1,4 +1,3 @@
-// app/(routes)/leaderboard/page.tsx
 import {
   getTournaments,
   getCurrentTournament,
@@ -11,23 +10,21 @@ import ShareShot from '@/components/ShareShot';
 import BoardAnalytics from '@/components/BoardAnalytics';
 import LeaderboardSwitcher from '@/components/LeaderboardSwitcher';
 
+type ResultLike = { place: number; name: string; gross: number; net: number; hc: number };
+
 export const dynamic = 'force-dynamic';
 
 export default async function Page(
   props: { searchParams: Promise<Record<string, string | string[] | undefined>> }
 ) {
-  // Next.js 15 の typed searchParams は Promise なので await 必須
-  const sp = await props.searchParams;
+  const sp = (await props.searchParams) ?? {};
+  const tParam = Array.isArray(sp.t) ? sp.t[0] : sp.t;
+
   const all = await getTournaments();
+  const options = [...all.filter(a => a.isCurrent), ...all.filter(a => !a.isCurrent)];
 
-  // 並び：isCurrent → その他
-  const options = [
-    ...all.filter(a => a.isCurrent),
-    ...all.filter(a => !a.isCurrent),
-  ];
-
-  const activeSlug = (sp.t as string) || options[0]?.slug;
-  const active = all.find(t => t.slug === activeSlug) || (await getCurrentTournament());
+  const activeSlug = tParam || options[0]?.slug || undefined;
+  const active = all.find(t => t.slug === activeSlug) || (await getCurrentTournament()) || null;
 
   const [grid, awards, results] = await Promise.all([
     getLeaderboardGridFor(active?.slug),
@@ -37,8 +34,8 @@ export default async function Page(
 
   const top3 = results
     .slice()
-    .sort((a, b) => a.place - b.place)
-    .filter((r) => r.place >= 1 && r.place <= 3)
+    .sort((a: ResultLike, b: ResultLike) => a.place - b.place)
+    .filter((r: ResultLike) => r.place >= 1 && r.place <= 3)
     .slice(0, 3);
 
   return (
@@ -55,16 +52,12 @@ export default async function Page(
         )}
       </header>
 
-      {/* テーブル（PNG保存対象） */}
       <div id="lbArea">
         <ScoreTable grid={grid} />
       </div>
 
-      {/* アナリティクス */}
       <BoardAnalytics grid={grid} results={results} awards={awards} />
-
-      {/* シェアPNG */}
-      <ShareShot current={active || null} grid={grid} top3={top3} awards={awards} />
+      <ShareShot current={active} grid={grid} top3={top3} awards={awards} />
     </section>
   );
 }

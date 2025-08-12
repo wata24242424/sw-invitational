@@ -6,13 +6,11 @@ import type { Route } from 'next';
 import { motion } from 'framer-motion';
 import type { Tournament } from '@/lib/types';
 
-// QRは動的importで軽量化
+// QR動的 import
 async function genQrDataUrl(text: string) {
   const { toDataURL } = await import('qrcode');
   return await toDataURL(text, { margin: 1, width: 220 });
 }
-
-/** 配列シャッフル */
 function shuffle<T>(arr: T[]): T[] {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
@@ -54,21 +52,18 @@ export default function TopClient({ current, past }: { current: Tournament | nul
   }
 
   const gcal = current?.dateStartUtc && current?.dateEndUtc
-    ? `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(current.title)}&details=${encodeURIComponent('SW Invitational / 楽しく安全に⛳️')}&location=${encodeURIComponent(`${current.course ?? ''} ${current.address ?? ''}`)}&dates=${current.dateStartUtc}/${current.dateEndUtc}`
+    ? `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(current.title)}&details=${encodeURIComponent('SW Invitational')}&location=${encodeURIComponent(`${current.course ?? ''} ${current.address ?? ''}`)}&dates=${current.dateStartUtc}/${current.dateEndUtc}`
     : null;
 
   return (
     <section className="grid gap-8">
-      {/* 上部：直近コンペ（左テキスト / 右画像） */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card earth-card relative">
-        {/* 右上の共有アイコン */}
         <div className="icon-row">
           <button className="icon-btn" onClick={onShareUrl} aria-label="URLで共有"><LinkIcon /></button>
           <button className="icon-btn" onClick={onShareQr} aria-label="QRで共有"><QrIcon /></button>
         </div>
 
         <div className="grid md:grid-cols-[1fr,360px] gap-4 items-start">
-          {/* 左：テキスト */}
           <div>
             <h1 className="text-2xl md:text-3xl font-semibold">{current?.title ?? 'SW Invitational'}</h1>
             <p className="mt-2 text-black/70">
@@ -88,21 +83,15 @@ export default function TopClient({ current, past }: { current: Tournament | nul
               <Link href={'/entry' satisfies Route} className="btn-cta inline-flex items-center gap-2">⛳ エントリーする</Link>
             </div>
 
-            {/* 二次導線 */}
+            {/* 二次導線（リーダーボードは落とし） */}
             <div className="mt-4 flex flex-wrap gap-2">
+              <Link href={'/pairings' satisfies Route} className="btn-primary">組み合わせ</Link>
               {current?.website && <a href={current.website} target="_blank" rel="noreferrer" className="btn-primary">ゴルフ場サイト</a>}
               {current?.gmaps && <a href={current.gmaps} target="_blank" rel="noreferrer" className="btn-primary">地図を見る</a>}
               {gcal && <a href={gcal} target="_blank" rel="noreferrer" className="btn-primary">Googleカレンダー</a>}
             </div>
-
-            {/* 組み合わせ / リーダーボード */}
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Link href={'/pairings' satisfies Route} className="btn-primary">組み合わせ</Link>
-              <Link href={'/leaderboard' satisfies Route} className="btn-primary">リーダーボード</Link>
-            </div>
           </div>
 
-          {/* 右：サムネ（シートのthumbnail or ギャラリー先頭 or 代替） */}
           <div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -113,7 +102,6 @@ export default function TopClient({ current, past }: { current: Tournament | nul
           </div>
         </div>
 
-        {/* QRモーダル */}
         {qrOpen && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 grid place-items-center" onClick={() => setQrOpen(false)}>
             <div className="bg-white rounded-2xl p-4 w-[280px] border border-black/10" onClick={(e) => e.stopPropagation()}>
@@ -126,7 +114,7 @@ export default function TopClient({ current, past }: { current: Tournament | nul
         )}
       </motion.div>
 
-      {/* 過去の大会（独立セクション） */}
+      {/* 過去の大会（詳細→ /leaderboard?t=slug に遷移） */}
       <section className="card">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold">過去の大会</h2>
@@ -138,7 +126,12 @@ export default function TopClient({ current, past }: { current: Tournament | nul
               <article key={t.slug} className="card">
                 <div className="font-medium">{t.title}</div>
                 <div className="text-sm text-black/60 mt-1">{t.dateLabel ?? ''}{t.course ? ` ・ ${t.course}` : ''}</div>
-                <a href={`/past/${t.slug}`} className="btn-primary mt-3">詳細</a>
+                <Link
+                  href={{ pathname: '/leaderboard', query: { t: t.slug } }}
+                  className="btn-primary mt-3 inline-flex"
+                >
+                  詳細（リーダーボード）
+                </Link>
               </article>
             ))}
           </div>
@@ -147,13 +140,12 @@ export default function TopClient({ current, past }: { current: Tournament | nul
         )}
       </section>
 
-      {/* 下部：横スクロール・ギャラリー */}
+      {/* 横スクロール・ギャラリー */}
       <section className="card">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold">ギャラリー</h2>
           <Link href={'/gallery' satisfies Route} className="text-sm underline">もっと見る</Link>
         </div>
-
         {strip.length > 0 ? (
           <div className="gallery-strip">
             <div className="gallery-track">
@@ -166,15 +158,13 @@ export default function TopClient({ current, past }: { current: Tournament | nul
             </div>
           </div>
         ) : (
-          <div className="text-sm text-black/60">まだ写真がありません。みんなのベストショットをお待ちしています。</div>
+          <div className="text-sm text-black/60">まだ写真がありません。</div>
         )}
-        <div className="mt-2 text-xs text-black/50">※ ホバーで一時停止。タップでギャラリーへ。</div>
       </section>
     </section>
   );
 }
 
-/* --- icons --- */
 function LinkIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
