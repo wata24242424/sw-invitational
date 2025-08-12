@@ -1,19 +1,16 @@
-import type { Config } from 'tailwindcss'
+// tailwind.config.ts
+import type { Config } from 'tailwindcss';
 
 export default {
-  content: [
-    './app/**/*.{ts,tsx}',
-    './components/**/*.{ts,tsx}'
-  ],
+  content: ['./app/**/*.{ts,tsx}','./components/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        golf: {
-          green: '#1E8E3E',
-          dark: '#0B3D2E'
-        }
-      }
-    }
+        main: '#F0EBE3',
+        base: { light: '#E4DCCF', dark: '#7D9D9C' },
+        accent: '#576F72',
+      },
+    },
   },
-  plugins: []
-} satisfies Config
+  plugins: [],
+} satisfies Config;
