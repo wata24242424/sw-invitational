@@ -1,21 +1,43 @@
 import { google } from 'googleapis';
 import { GoogleAuth } from 'google-auth-library';
 import { ENV } from './env';
-import type { EntryPayload, PairingRow, LeaderboardRow, ResultsRow } from './types';
+import type {
+  EntryPayload, PairingRow, LeaderboardRow, ResultsRow,
+  Tournament, LeaderboardGrid, Award
+} from './types';
 
+/* ---------- auth / client ---------- */
 function auth() {
   const creds = JSON.parse(ENV.SA_KEY);
-  const auth = new GoogleAuth({
+  return new GoogleAuth({
     credentials: creds,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
-  return auth;
 }
-
 function client() {
   return google.sheets({ version: 'v4', auth: auth() });
 }
 
+/* ---------- helpers ---------- */
+async function tryGet(range: string) {
+  try {
+    const sheets = client();
+    const { data } = await sheets.spreadsheets.values.get({
+      spreadsheetId: ENV.SHEET_ID,
+      range,
+    });
+    return data.values ?? [];
+  } catch {
+    return null;
+  }
+}
+function sheetName(base: string, slug?: string) {
+  return slug ? `${base}_${slug}` : base;
+}
+
+/* ===================================
+ * Entries
+ * =================================== */
 export async function appendEntry(payload: EntryPayload) {
   const sheets = client();
   const values = [[
@@ -24,7 +46,7 @@ export async function appendEntry(payload: EntryPayload) {
     payload.hasCar === 'yes' ? 'あり' : 'なし',
     payload.pickup,
     payload.note,
-    new Date().toISOString()
+    new Date().toISOString(),
   ]];
   await sheets.spreadsheets.values.append({
     spreadsheetId: ENV.SHEET_ID,
@@ -33,7 +55,6 @@ export async function appendEntry(payload: EntryPayload) {
     requestBody: { values },
   });
 }
-
 export async function getAllEntries(): Promise<(string | number)[][]> {
   const sheets = client();
   const { data } = await sheets.spreadsheets.values.get({
@@ -43,14 +64,11 @@ export async function getAllEntries(): Promise<(string | number)[][]> {
   return data.values ?? [];
 }
 
+/* ===================================
+ * Pairings / Leaderboard / Results（従来の簡易）
+ * =================================== */
 export async function getPairings(): Promise<PairingRow[]> {
-  const sheets = client();
-  const { data } = await sheets.spreadsheets.values.get({
-    spreadsheetId: ENV.SHEET_ID,
-    range: `${ENV.SHEET_PAIRINGS}!A:D`,
-  });
-  const rows = data.values ?? [];
-  // A: hole (OUT/IN), B: group, C: name, D: hc
+  const rows = await tryGet(`${ENV.SHEET_PAIRINGS}!A:D`) || [];
   return rows.slice(1).map((r) => ({
     hole: (r[0] as 'OUT' | 'IN') ?? 'OUT',
     group: String(r[1] ?? ''),
@@ -58,15 +76,8 @@ export async function getPairings(): Promise<PairingRow[]> {
     hc: r[3] ? Number(r[3]) : undefined,
   }));
 }
-
 export async function getLeaderboard(): Promise<LeaderboardRow[]> {
-  const sheets = client();
-  const { data } = await sheets.spreadsheets.values.get({
-    spreadsheetId: ENV.SHEET_ID,
-    range: `${ENV.SHEET_LEADERBOARD}!A:D`,
-  });
-  const rows = data.values ?? [];
-  // A: name, B: gross, C: net?, D: thru?
+  const rows = await tryGet(`${ENV.SHEET_LEADERBOARD}!A:D`) || [];
   return rows.slice(1).map((r) => ({
     name: String(r[0] ?? ''),
     gross: Number(r[1] ?? 0),
@@ -74,15 +85,118 @@ export async function getLeaderboard(): Promise<LeaderboardRow[]> {
     thru: r[3] ? String(r[3]) : undefined,
   }));
 }
-
 export async function getResults(): Promise<ResultsRow[]> {
-  const sheets = client();
-  const { data } = await sheets.spreadsheets.values.get({
-    spreadsheetId: ENV.SHEET_ID,
-    range: `${ENV.SHEET_RESULTS}!A:E`,
-  });
-  const rows = data.values ?? [];
-  // A: place, B: name, C: gross, D: net, E: hc
+  const rows = await tryGet(`${ENV.SHEET_RESULTS}!A:E`) || [];
+  return rows.slice(1).map((r) => ({
+    place: Number(r[0] ?? 0),
+    name: String(r[1] ?? ''),
+    gross: Number(r[2] ?? 0),
+    net: Number(r[3] ?? 0),
+    hc: Number(r[4] ?? 0),
+  }));
+}
+
+/* ===================================
+ * Tournaments
+ * =================================== */
+export async function getTournaments(): Promise<Tournament[]> {
+  const rows = await tryGet(`tournaments!A:M`) || [];
+  return rows.slice(1).map((r) => ({
+    slug: String(r[0] ?? ''),
+    title: String(r[1] ?? ''),
+    dateLabel: r[2] ? String(r[2]) : undefined,
+    dateStartUtc: r[3] ? String(r[3]) : undefined,
+    dateEndUtc: r[4] ? String(r[4]) : undefined,
+    course: r[5] ? String(r[5]) : undefined,
+    address: r[6] ? String(r[6]) : undefined,
+    participants: r[7] ? Number(r[7]) : undefined,
+    fee: r[8] ? Number(r[8]) : undefined,
+    thumbnail: r[9] ? String(r[9]) : undefined,
+    website: r[10] ? String(r[10]) : undefined,
+    gmaps: r[11] ? String(r[11]) : undefined,
+    isCurrent: (r[12] ?? '') === '1' || String(r[12] ?? '').toLowerCase() === 'true',
+  })).filter(t => t.slug && t.title);
+}
+export async function getCurrentTournament(): Promise<Tournament | null> {
+  const all = await getTournaments();
+  return all.find(t => t.isCurrent) ?? all[0] ?? null;
+}
+
+/* ===================================
+ * LeaderboardGrid / Awards（デフォルトタブ）
+ * =================================== */
+/** Row1: B〜S = PAR, Row2+: A=名前, B〜S=スコア */
+export async function getLeaderboardGrid(): Promise<LeaderboardGrid> {
+  let rows = await tryGet(`${ENV.SHEET_LEADERBOARD}!A1:S1000`) || [];
+  rows = rows.map(r => Array.from({ length: 19 }, (_, i) => r[i] ?? ''));
+
+  const header = rows[0] ?? [];
+  const par = (header.slice(1, 19) as (string | number)[]).map(v => (v === '' ? NaN : Number(v)));
+
+  const players = rows.slice(1)
+    .filter(r => (r[0] ?? '') !== '')
+    .map((r) => {
+      const name = String(r[0] ?? '');
+      const scores = (r.slice(1, 19) as (string | number)[]).map(v => (v === '' ? null : Number(v)));
+      const sum = (arr: (number | null)[]) => {
+        const nums = arr.filter((x): x is number => typeof x === 'number' && Number.isFinite(x));
+        return nums.length ? nums.reduce((a, b) => a + b, 0) : null;
+      };
+      return { name, scores, out: sum(scores.slice(0, 9)), in: sum(scores.slice(9, 18)), gross: sum(scores) };
+    });
+
+  return { par, players };
+}
+export async function getAwards(): Promise<Award[]> {
+  const rows = await tryGet(`${ENV.SHEET_AWARDS}!A1:D1000`) || [];
+  return rows.slice(1).map((r) => ({
+    category: String(r[0] ?? ''),
+    name: String(r[1] ?? ''),
+    hole: r[2] ? String(r[2]) : undefined,
+    note: r[3] ? String(r[3]) : undefined,
+  })).filter(a => a.category && a.name);
+}
+
+/* ===================================
+ * 大会別タブ（存在すれば優先、無ければ既定タブへフォールバック）
+ * =================================== */
+export async function getLeaderboardGridFor(slug?: string): Promise<LeaderboardGrid> {
+  let rows = await tryGet(`${sheetName(ENV.SHEET_LEADERBOARD, slug)}!A1:S1000`);
+  if (!rows) rows = await tryGet(`${ENV.SHEET_LEADERBOARD}!A1:S1000`);
+  rows = (rows ?? []).map(r => Array.from({ length: 19 }, (_, i) => r[i] ?? ''));
+
+  const header = rows[0] ?? [];
+  const par = (header.slice(1, 19) as (string | number)[]).map(v => (v === '' ? NaN : Number(v)));
+
+  const players = rows.slice(1)
+    .filter(r => (r[0] ?? '') !== '')
+    .map((r) => {
+      const name = String(r[0] ?? '');
+      const scores = (r.slice(1, 19) as (string | number)[]).map(v => (v === '' ? null : Number(v)));
+      const sum = (arr: (number | null)[]) => {
+        const nums = arr.filter((x): x is number => typeof x === 'number' && Number.isFinite(x));
+        return nums.length ? nums.reduce((a, b) => a + b, 0) : null;
+      };
+      return { name, scores, out: sum(scores.slice(0, 9)), in: sum(scores.slice(9, 18)), gross: sum(scores) };
+    });
+
+  return { par, players };
+}
+export async function getAwardsFor(slug?: string): Promise<Award[]> {
+  let rows = await tryGet(`${sheetName(ENV.SHEET_AWARDS, slug)}!A1:D1000`);
+  if (!rows) rows = await tryGet(`${ENV.SHEET_AWARDS}!A1:D1000`);
+  rows = rows ?? [];
+  return rows.slice(1).map((r) => ({
+    category: String(r[0] ?? ''),
+    name: String(r[1] ?? ''),
+    hole: r[2] ? String(r[2]) : undefined,
+    note: r[3] ? String(r[3]) : undefined,
+  })).filter(a => a.category && a.name);
+}
+export async function getResultsFor(slug?: string): Promise<ResultsRow[]> {
+  let rows = await tryGet(`${sheetName(ENV.SHEET_RESULTS, slug)}!A:E`);
+  if (!rows) rows = await tryGet(`${ENV.SHEET_RESULTS}!A:E`);
+  rows = rows ?? [];
   return rows.slice(1).map((r) => ({
     place: Number(r[0] ?? 0),
     name: String(r[1] ?? ''),
