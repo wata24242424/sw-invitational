@@ -6,7 +6,7 @@
 ========================= */
 :root {
   /* Earthy palette */
-  --accent: #2E7D32;         /* deep green */
+  --accent: #576F72;         /* deep green */
   --earth-olive: #4E5B31;
   --earth-sand: #EDE7D5;
   --earth-clay: #C77C50;
@@ -17,7 +17,7 @@
   --muted: rgba(0,0,0,0.60);
 }
 
-html, body { height: 100%; background: #fff; color: var(--text); }
+html, body { height: 100%; background: var(--main); color: var(--text); }
 
 /* Golf dot pattern (薄め) */
 .bg-golf-dots {
@@ -31,7 +31,7 @@ html, body { height: 100%; background: #fff; color: var(--text); }
 ========================= */
 .btn-primary { @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium shadow-sm border border-black/10 hover:shadow-md transition; }
 .btn-accent  { background: var(--accent); color: #fff; border: 0; }
-.card        { @apply rounded-2xl border border-black/10 bg-white/80 backdrop-blur p-5 shadow-sm; }
+.card        { @apply rounded-2xl border border-black/10 p-5 shadow-sm; }
 
 .icon-btn { @apply inline-flex items-center justify-center size-9 rounded-full border border-black/10 bg-white/90 hover:bg-black/5 shadow-sm transition; }
 .icon-row { @apply absolute right-4 top-4 flex items-center gap-2; }
@@ -133,8 +133,8 @@ label { @apply text-sm font-medium text-black/70; }
 .lb-th { @apply text-left font-semibold border-b; }
 .lb-td { @apply border-b; text-align: center; }
 
-.sticky-col { position: sticky; left: 0; background: #fff; box-shadow: 1px 0 0 rgba(0,0,0,.06); z-index: 10; }
-.sticky-head { position: sticky; top: 0; background: #fff; z-index: 20; }
+.sticky-col { position: sticky; left: 0; background: var(--main); box-shadow: 1px 0 0 rgba(0,0,0,.06); z-index: 10; }
+.sticky-head { position: sticky; top: 0; background: var(--main); z-index: 20; }
 
 @media (max-width: 767px) {
   .lb-table { min-width: 0; }         /* カード感を出す */
@@ -154,7 +154,7 @@ label { @apply text-sm font-medium text-black/70; }
 
 /* ===== Share Card (1200x630 social image) ===== */
 .share-card {
-  width: 1200px; height: 630px; background: #fff;
+  width: 1200px; height: 630px; background: var(--main);
   border-radius: 24px; padding: 40px;
   display: grid; grid-template-rows: auto 1fr auto; gap: 20px;
   border: 1px solid rgba(0,0,0,.06);
@@ -187,9 +187,9 @@ label { @apply text-sm font-medium text-black/70; }
 /* ===== Analytics look & feel ===== */
 .kpi-grid { display: grid; gap: 12px; }
 @media (min-width: 768px){ .kpi-grid { grid-template-columns: repeat(4,minmax(0,1fr)); } }
-.kpi-card { @apply rounded-2xl border border-black/10 bg-white/80 backdrop-blur p-5 shadow-sm; display:grid; gap:6px; }
+.kpi-card { @apply rounded-2xl border border-black/10 p-5 shadow-sm; display:grid; gap:6px; }
 .kpi-card {
-  @apply rounded-2xl border border-black/10 bg-white/80 backdrop-blur p-5 shadow-sm;
+  @apply rounded-2xl border border-black/10 p-5 shadow-sm;
   display: grid; gap: 6px;
 }
 
@@ -229,8 +229,8 @@ label { @apply text-sm font-medium text-black/70; }
 .table-fixed { table-layout: fixed; }
 .player-cell { max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hole-col { width: 44px; }
-.sticky-col { position: sticky; left: 0; background: #fff; box-shadow: 1px 0 0 rgba(0,0,0,.06); z-index: 10; }
-.sticky-head { position: sticky; top: 0; background: #fff; z-index: 20; }
+.sticky-col { position: sticky; left: 0; background: var(--main); box-shadow: 1px 0 0 rgba(0,0,0,.06); z-index: 10; }
+.sticky-head { position: sticky; top: 0; background: var(--main); z-index: 20; }
 /* ===== Futuristic Gallery ===== */
 .masonry {
   column-count: 1;
@@ -241,7 +241,7 @@ label { @apply text-sm font-medium text-black/70; }
 .tile {
   break-inside: avoid; margin-bottom: 12px; position: relative; overflow: hidden;
   border-radius: 14px; border: 1px solid rgba(0,0,0,.08);
-  background: #fff;
+  background: var(--main);
   box-shadow: 0 4px 24px rgba(0,0,0,.06);
 }
 .tile img { width: 100%; height: auto; display: block; transform: scale(1.02); transition: transform .6s cubic-bezier(.2,.8,.2,1); }

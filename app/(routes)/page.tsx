@@ -9,3 +9,6 @@ export default async function Page() {
 
   return <TopClient current={current} past={past} />;
 }
+// app/(routes)/page.tsx
+export const revalidate = 300; // 5分
+

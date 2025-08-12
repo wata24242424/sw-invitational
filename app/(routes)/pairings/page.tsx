@@ -22,7 +22,7 @@ export default async function Page() {
         const [hole, group] = g.split('-');
         const rows = data.filter((d) => `${d.hole}-${d.group}` === g);
         return (
-          <div className="rounded-2xl border border-black/10 bg-white/80 backdrop-blur p-5 shadow-sm" key={g}>
+          <div className="rounded-2xl border border-black/10 p-5 shadow-sm" key={g}>
             <div className="flex items-center justify-between">
               <h2 className="font-semibold">{hole} – Group {group}</h2>
             </div>
